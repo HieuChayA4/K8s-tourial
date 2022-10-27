@@ -5,23 +5,32 @@
 - An orchestrator is a system that *deploys* and *manages* applications. It can deploy your applications and dynamically respond to changes
 - A *containerized application* is an app that runs in a container
 
-![](https://i.imgur.com/PJvLZvs.png)
+<p align="center">
+  <img src="https://i.imgur.com/PJvLZvs.png">
+</p>
 
 - A cloud-native application is one that’s designed to meet cloud-like demands of auto-scaling, self-healing, rolling updates, rollbacks and more. Run anywhere that have Kubernetes
 
- ![](https://i.imgur.com/El4dHWU.png)
+<p align="center">
+  <img src="https://i.imgur.com/El4dHWU.png">
+</p>
 
 - A microservices app is built from lots of independent small specialised parts that work together to form a meaningful application
 - Each microservice runs as a container
 
-![](https://i.imgur.com/XC6RIxT.png)
+<p align="center">
+  <img src="https://i.imgur.com/XC6RIxT.png">
+</p>
 
 :point_right: Kubernetes deploys and manages (*orchestrates*) applications that are packaged and run as containers (*containerized*) and that are built in ways (*cloud-native microservices*) that allow them to scale, self-heal, and be updated in-line with modern cloud-like requirements.
 
 ## Kubernetes and Docker
 - Docker has tools that build and package applications as container images.
 - Kubernetes operates at a higher level providing orchestration services such as self-healing, scaling and updates.
-![](https://i.imgur.com/Jrckkgb.jpg)
+
+<p align="center">
+  <img src="https://i.imgur.com/Jrckkgb.jpg">
+</p>
 
 :hugs: *"Hey Kubernetes, here’s an app. Please deploy it and make sure it keeps running…"*"
 
@@ -64,7 +73,9 @@ A Kubernetes cluster:
 
 -  Cluster on a supported public cloud platform, such as AWS, Azure, GCP, ... -> control plane will be running a *cloud controller manager*
 
-![](https://i.imgur.com/MfYhI3o.png)
+<p align="center">
+  <img src="https://i.imgur.com/MfYhI3o.png">
+</p>
 
 ## Worker nodes
 
@@ -78,7 +89,9 @@ A Kubernetes cluster:
   - Container Runtime
   - kube - proxy
 
-![](https://i.imgur.com/porDOMc.png)
+<p align="center">
+  <img src="https://i.imgur.com/porDOMc.png">
+</p>
 
 ### Kubelet
 - The kubelet is main Kubernetes agent and runs on every cluster node
@@ -97,7 +110,10 @@ A Kubernetes cluster:
 
 ## What is Pod?
 
-![](https://i.imgur.com/Y9JUv73.png)
+<p align="center">
+  <img src="https://i.imgur.com/Y9JUv73.png">
+</p>
+
 - Atomic unit of scheduling >> Pod
 - Kubernetes runs containerized apps, container runs inside a Pod.
 
@@ -105,18 +121,24 @@ A Kubernetes cluster:
 
 - a Kubernetes Pod is a construct for running one or more containers
 
-![](https://i.imgur.com/8kX9lCg.png)
+<p align="center">
+  <img src="https://i.imgur.com/8kX9lCg.png">
+</p>
 
 ### Pod anatomy
 
 - Multiple containers in a Pod, they all share the same Pod environment. All containers in
 the same Pod will share the same IP address (the Pod’s IP).
 
-![](https://i.imgur.com/bQj01Gc.png)
+<p align="center">
+  <img src="https://i.imgur.com/bQj01Gc.png">
+</p>
 
 - Containers in the same Pod can communicate with each other (container-to-container within the Pod) by the Pod’s localhost interface.
 
-![](https://i.imgur.com/lkGBkmB.png)
+<p align="center">
+  <img src="https://i.imgur.com/lkGBkmB.png">
+</p>
 
 - Pods is the minimum unit of scheduling in Kubernetes.
 - a Pod is only ready for service when all its containers are up and running.
@@ -139,11 +161,15 @@ loops constantly observing the cluster making sure observed state matches desire
 - Services scale application without affecting the end-user.
 - Services bring stable IP addresses and DNS names to the unstable Pods.
 
-![](https://i.imgur.com/yVkVstF.png)
+<p align="center">
+  <img src="https://i.imgur.com/yVkVstF.png">
+</p>
 
 ## Pod theory
 
-![](https://i.imgur.com/15NHd0X.png)
+<p align="center">
+  <img src="https://i.imgur.com/15NHd0X.png">
+</p>
  
 - *Labels* : group Pods and associate them with other objects
 - *Annotations* : add experimental features and integrations with 3rd-party tools and services
@@ -167,9 +193,13 @@ loops constantly observing the cluster making sure observed state matches desire
 
 - Each Pod creates its own *network namespace*.
 
-![](https://i.imgur.com/CCUy7Aj.png)
+<p align="center">
+  <img src="https://i.imgur.com/CCUy7Aj.png">
+</p>
 
-![](https://i.imgur.com/SFlUSsf.png)
+<p align="center">
+  <img src="https://i.imgur.com/SFlUSsf.png">
+</p>
 
 ## Multi-container Pods
 
@@ -178,3 +208,4 @@ loops constantly observing the cluster making sure observed state matches desire
    - Adapter pattern
    - Ambassador pattern
    - Init pattern
+   
