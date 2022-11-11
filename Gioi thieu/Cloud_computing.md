@@ -28,4 +28,4 @@
 
 - Community cloud: một dịch vụ đám mây được chia sẻ giữa nhiều tổ chức, doanh nghiệp trong cùng một cộng đồng hoặc có chung một mối quan tâm nào đó. Dịch vụ này được quản lý bởi một bên thứ ba hoặc quản lý nội bộ giữa các tổ chức này.
 
-- Private cloud: Là sự kết hợp của private cloud và public cloud. Cho phép ta khai thác điểm mạnh của từng mô hình cũng như đưa ra phương thức sử dụng tối ưu cho người sử dụng. Những “đám mây” này thường do doanh nghiệp tạo ra và việc quản lý sẽ được phân chia giữa doanh nghiệp và nhà cung cấp điện toán đám mây công cộng.
+- Private cloud: Là sự kết hợp của private cloud và public cloud. Cho phép ta khai thác điểm mạnh của từng mô hình cũng như đưa ra phương thức sử dụng tối ưu cho người sử dụng. Những “đám mây” này thường do doanh nghiệp tạo ra và việc quản lý sẽ được phân chia giữa doanh nghiệp và nhà cung cấp điện toán đám mây công cộng. s
