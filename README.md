@@ -209,3 +209,114 @@ loops constantly observing the cluster making sure observed state matches desire
    - Ambassador pattern
    - Init pattern
    
+
+
+## Virtual clusters và Namepaces
+- Namespaces là cách để chia một Kubernetes cluster thành nhiều cluster ảo.
+- Kubernetes Namepaces # [Linux Kernel namespace](./Gioi%20thieu/Namespace_linux.md)
+- Namespaces là một phần của Kubernetes cluster được thiết kế để có thể áp *quotas* và *policy* tới các nhóm objects. Các đối tượng có thể được *namespaced*  bao gồm các đối tượng như Pods, Services và Deployments.
+![Phạm vi của Namespaces trong Kubernetes](https://i.imgur.com/NR2u1mi.png)
+  - Một Kubernetes Cluster sẽ bao gồm rất nhiều node (master, worker).
+  - Một namespace trong Kubernetes Cluster sẽ nằm trên tất cả các node.
+  - Mọi ứng dụng khi triển khai trong Kubernetes phải thuộc vào một namespace nào đó.
+
+- Resource: Được hiểu là một loại tài nguyên được kubernetes quản lý như namespace, pods, volume, service, serviceaccount, configMap, secret,…
+ ![](https://i.imgur.com/nQm6q2N.png)
+
+- Có 2 cách để triển khai objects tới một Namespace cụ thể: 
+  - Imperatively: yêu cầu thêm flag -n hoặc --namespace vào commands 
+  - Declaratively: chỉ định Namespace trong file YAML.
+
+## Kubernetes Deployments
+- Deployment là đối tượng chính đảm nhận việc deploy và quản lý ứng dụng của K8s. Nó cho phép deploy các Pod, update Pod, rollback Pod và các ReplicaSet.
+- Để tạo mới đối tượng Deployment, cần định nghĩa thông tin cho nó sử dụng tập tin YAML.
+Ví dụ: 
+
+```
+Version: apps/v1
+kind: Deployment
+metadata:
+  name: <name>
+spec:
+  replicas: <replicas-number>
+  selector:
+    matchLabels:
+      <label>
+  template:
+    metadata:
+      labels:
+        <label>
+    spec:
+      containers:
+      - name: <container_name>
+        image: <container_image>
+      - name: <container_name>
+        image: <container_image>
+```
+  - <name> là tên của Deployment
+  - <replicas-number> là số lượng Pod mà ta muốn Deployment đảm bảo.
+  - <label> định nghĩa label cho Pod.
+  - <container_name> tên của container trong Pod sau khi khởi tạo
+  - <container_image> tên của Image được sử dụng để tạo container.
+
+- Một Deployment object chỉ có thể quản lý một Pod template. Ví dụ một ứng dụng có dịch vụ front-end và back-end sẽ cần các Pod khác nhau cho mỗi dịch vụ và sẽ đi kèm theo 2 Deployment Objects. Và mỗi Deployment Objects có thể quản lý nhiều bản replica của Pod giống nhau. 
+### Deployments và ReplicaSets
+- Deployment sẽ quản lý các ReplicaSet và các ReplicaSet sẽ quản lý các Pods và mang tới khả năng self-healing và sacling để chạy các ứng dụng. Deployment sẽ tạo ra các ReplicaSet để đảm bảo số lượng Pod đồng thời thêm *rollout* và *rollback*
+- Để định nghĩa số lượng replicas, số lượng Pod mà Deployment này quản lý, sử dụng field *spec.replicas*. Trường *spec.selector* dùng để định nghĩa cách mà Deployment tìm các Pod cần quản lý ở Thuộc tính *matchLabels* . Bất kỳ Pod nào có label định nghĩa là “<label>” sẽ được Deployment select và quản lý.
+- trường *spec.strategy* có thể dùng để định nghĩa cách rollout và rollback các update của Pod.
+- Trường *spec.template* dùng để định nghĩa thông tin về Pod cần chạy. Thuộc tính *metadata.labels* trong trường *spec.template* có thể dùng để gán nhãn cho Pod.
+
+Ví dụ: 
+
+```
+ Version: apps/v1
+kind: Deployment
+metadata:
+  name: node-hello
+spec:
+  strategy:
+    type: Rollingupdate
+    rollingupdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-hello
+  template:
+    metadata:
+      labels:
+        app: node-hello
+    spec:
+      containers:
+      - name: node-hello
+        image: gcr.io/google-samples/node-hello:1.0
+
+```
+- Việc update sử dụng trường *rollingupdate*
+- *maxUnavailable: 1* đảm bảo không có quá 1 Pod không hoạt động trong quá trình update
+- *maxSurge: 1* đảm bảo không có quá 1 Pod được tạo nhiều hơn trong quá trình update
+
+### Declarative vs imperative
+Có hai cách cơ bản để triển khai trong Kubernetes: **imperative**, sử dụng các lệnh *kubectl* hoặc **declarative**, bằng cách viết file khai báo và sử dụng kubectl apply.
+
+[Declarative vs imperative tourial](https://medium.com/payscale-tech/imperative-vs-declarative-a-kubernetes-tutorial-4be66c5d8914)
+
+### Rolling update một Deployment
+
+- Rolling update cho phép ta thay đổi các thiết lập của Pods một cách từ từ.
+Ví dụ: 
+- Để thực hiện update image của container, ta cần update file YAML Deployment với bản image mới hơn và post nó lên API server. Thao tác này cập nhật Deployment object hiện có với *desired state* mới yêu cầu cùng số lượng *Pods* nhưng tất cả đều chạy với *image* phiên bản mới hơn.
+- Kubernetes tạo một *ReplicaSet* thứ hai để tạo và quản lý các *Pods* với *image* mới. Tại thời điểm này, K8s tồn tại hai *ReplicaSet* – *ReplicaSet* đầu dành cho các *Pods* có *Image* cũ và *ReplicaSet* mới dành cho các *Pods* có *Image* mới. Khi Kubernetes tăng số lượng *Pods* trong *ReplicaSet* mới, nó sẽ giảm số lượng *Pods* trong *ReplicaSet* cũ. Quá trình update diễn ra một cách zero downtime.
+
+- Quá trình *Rollback* diễn ra một cách tương tự
+
+## Kubernetes Services
+
+```
+[To do next]
+- Continue content of the book
+- Cách bầu bán, lưu trữ, bầu chọn master node etcd ?
+- Controller theo dõi lẫn nhau ?
+- Cách 1 pod nhận dc ip từ kupe proxy ? Công nghệ phía sau ?
+- - Ngoài iptable của kupe proxy còn cn nào khác? 
