@@ -313,6 +313,214 @@ Ví dụ:
 
 ## Kubernetes Services
 
+- *Pods* có khả năng seld-healing, mở rộng và rollouts nhờ *Controller* nhưng chúng vẫn không đáng tin cậy khi được kết nối một các trực tiếp. Khi một Pod lỗi nó được thay thế bởi một Pod khác hoặc khi scale Pod thì các Pod với IP mới sẽ được sinh ra... Việc kết nối đến từng Pod để vận hành trong K8s là k thể.  *Services* cung cấp mạng lưới ổn định và đáng tin cậy, cân bằng tải để kết nối, giao tiếp tới một nhóm các Pods.
+- *Service* là một REST object trong API được định nghĩa trong file manifest và được post lên API server.
+- Mỗi *Service* có một IP riêng, một stable DNS name, và stable port.
+- *Services* sử dụng các thuộc tính *labels* và *selectors* để lựa chọn các Pods được gửi traffic tới một các linh động.
+
+![how client connect to Pods throuch Services](https://i.imgur.com/uPWt8fb.png)
+
+-  Thông qua *Service* client có thể truy cập tới các Pod tông qua IP,DNS,Port của *Service* cho dù các Pods có thể scale up, down, hay update, rollback,..
+
+-  Bản thân *Services* cũng có khả năng giảm bớt các liên kết ràng buộc tới các Pods thông qua *labels* và *selectors*
+
+![select Pods with labels](https://i.imgur.com/GUZdbcV.png)
+
+- Khi các *labels* được liệt kê trong *selector*, *service* sẽ sử dụng hàm AND để lựa chọn các Pods đúng với các labels được liệt kê kể cả những Pod có nhiều hơn các labels được liệt kê.
+
+![](https://i.imgur.com/RGPXGaw.png)
+
+Ví dụ: 
+```
+**svc.yml**
+apiVersion: v1
+kind: Service
+metadata:
+name: hello-svc
+spec:
+ports:
+- port: 8080
+selector:
+app: hello-world <<== gửi tới Pods với label 
+env: tkb <<== gửi tới Pods với label 
+
+**deploy.yml** -> triển khai pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+name: hello-deploy -> tên pod
+spec:
+replicas: 10 -> số lượng
+<Snip>
+template:
+metadata:
+labels:
+app: hello-world <<== đánh dấu lable cho Pods
+env: tkb <<== Pod labels
+spec:
+containers:
+
+=> Service sẽ chọn các Pods với lable "app: hello-world" và "env: tkb" được khởi tạo bởi template được định nghĩa trong file deploy.yml
+```
+-  *Serivces* tự động cập nhật danh sách các Healthy pod thông qua sự kết hợp của việc lựa chọn các *label* và một cấu trúc gọi là *Enpoint opject*
+
+- Khi một *Serive* được tạo, K8s tự động tạo một *Enpoint object* gắn liền với nó. *Enpoint object* được sử dụng để lưu trữ một danh sách các Pods khỏe mạnh khớp với các lable được định nghĩa trong selecor của *Service*.
+
+### Truy cập *Services* từ trong cluster
+
+- K8s hỗ trợ một số loại *Serive*, mặc định là *CLusterIP* 
+- Service loại *ClusterIP* này sẽ có thể được truy cập bởi các ứng dụng khác chỉ khi các ứng dụng đó cũng nằm trong cluster. Các ứng dụng bên ngoài cluster sẽ không thể truy cập đến Service.
+- *ClusterIP* được đăng ký với tên của *Service* trong dịch vụ DNS nội bộ của *Cluster*. Tất cả các Pods trong Cluster được lập trình sẵn để sử dụng dịch vụ DNS của Cluster, tất cả các Pods có thể chuyển đổi tên *Services* thành *ClusterIP*.
+
+### Truy cập *Services* từ bên ngoài cluster
+
+- K8s có 2 loại *Service* cho các request  đến từ bên ngoài Cluster là: NodePort và LoadBalancer.
+
+#### NodePort
+- *NodePort* nằm trên *ClusterIP* nó sẽ mở một port cụ thể trên tất cả các node trong Cluster và lưu lượng truy cập được gửi đến bất kì node nào trong Cluster thông qua port được mở sẽ được chuyển tiếp đến dịch vụ bên trong Cluster.
+- Phạm vi của các port được mở cho service NodePort nằm trong khoảng 30000-32767, có thể trực tiếp chỉ định port này trong file yaml của mình hoặc để Kubernetes tự động chỉ định.
+- *ClusterIP* đăng ký một DNS name, virtual IP, và port với Cluster's DNS, *NodePort Service* xây dựng trên cơ sở này và thêm một *NodePort* có thể sử dụng để truy cập *Service* từ bên ngoài Cluster.
+
+**Ví dụ**
+```
+apiVersion: v1 
+kind: Service 
+metadata:
+  name: myapp-service 
+spec: 
+  type: NodePort 
+  selector: 
+    app: myapp 
+    type: front-end 
+  ports: 
+    - targetPort: 8080 
+      port: 80 
+      nodePort: 32593
+
+-> Client kết nối từ ngoài Cluster có thể gửi traffic tới bất kỳ node nào của Cluster trên port 32593. Các Pods trên Cluster có thể truy cập *Service* này bằng tên "myapp-service" qua port 80.
+```
+#### LoadBalancer
+
+- *Service LoadBalancer* giúp việc truy cập từ bên ngoài trở nên dễ dàng hơn bằng cách tích hợp với bộ cân bằng tải giao tiếp với internet trên nền tảng đám mây. Một địa chỉ Ip duy nhất sẽ chuyển tiếp tất cả các yêu cầu truy cập đến *Service* của Cluster 
+- *LoadBalancer* sẽ tạo ra một service *NodePort*, và yêu cầu nhà cung cấp dịch vụ lưu trữ Cluster K8S thiết lập một Public IP hoặc DNS name mà Clients có thể truy cập *Service* từ đó. 
+
+## Ingress
+- *NodePort* và *LoadBalancer* Services  có thể expose ứng dụng với người dùng tuy nhiên vẫn còn những hạn chế
+- Như đã đề cập ở trên *NodePort* chỉ làm việc với dải port 30000-32767 , và cần thông tin của Node name hoặc node IPs. *LoadBalancer* cần ánh xạ 1-1 giữa Service nội bộ và dịch vụ cân bằng tải của cloud provider. 
+- *Ingress* có thể giải quyết các vấn đề trên bằng cách expose nhiều *Services* qua một cloud load-balancer, Không bị hạn chế bởi số lượng Port mà NodePort có thể cung cấp. *Ingress* tạo một *LoadBalancer Service* trên port 80 hoặc 443  và sử dụng host-based và path-based routing để gửi traffic tới chính xác *Service*.
+
+![](https://i.imgur.com/CqYat7v.png)
+
+- Cơ chế hoạt động của Ingress gồm 2 thành phần chính:
+
+  - Ingress Controller: Là thành phần điều khiển chính làm nhiệm vụ điều hướng các request tới các service bên trong k8s. Thường thì Ingress Controller được cài đặt trên K8S và được expose ra ngoài dưới dạng NodePort.
+  - Ingress Rule: Là một tài nguyên trên K8S. Nó chứa nội dung khai báo rule để điều hướng từ một request tới một service cụ thể trên trong K8S.
+- *Ingress* hoạt động ở lớp 7 của mô hình OSI hay lớp ứng dụng , có thể kiểm tra HTTP header cũng như chuyển tiếp lưu lượng truy cập dựa trên tên host và path.
+
+![Host-based Routing](https://i.imgur.com/kaqU7Rl.png)
+
+![](https://i.imgur.com/xCwbPLy.png)
+
+- *Ingress* là một tài nguyên ở mức Namespace trên K8S. Và giống như các tài nguyên khác như Pod, Deployment hay Service, ta có thể định nghĩa nó bằng cách sử dụng file manifest dạng yaml.
+
+**Ví dụ**
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx-example
+  rules:
+  - http:
+      paths:
+      - path: /example
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 8080
+
+-> mọi request tới mà có Path chứa Prefix là /example thì sẽ được forward tới servcie test ở port 80.
+```
+#### Ingress Rule 
+
+Mỗi HTTP rule sẽ bao gồm các thông tin sau:
+  - Thông tin host (không bắt buộc). Nếu có khai báo host cụ thể, rule sẽ chỉ apply cho host đó. Nếu host không được khai báo, thì rule được áp dụng cho mọi http đến.
+  - Danh sách paths (ví dụ /testpath như bên trên), mỗi path sẽ có thông tin pathType và một backend (service) tương ứng với port của nó.
+  - Một backend là một bộ gồm service và port. HTTP (HTTPS) request mà thỏa mãn điều kiện về host và path sẽ được chuyển tới backend đã khai báo
+#### Path types
+Mỗi cấu hình path trong ingress đều yêu cầu phải có path type tương ứng. Có 3 loại path type đang được k8s support gồm:
+  - ImplementationSpecific
+  - Exact
+  - Prefix
+
+- Tài liệu tham khảo thêm về *Ingress* : [Click here](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+
+## Service Registration
+- Service Registration là tiến trình mà ứng dụng đăng chi tiết kết nối của nó tới *serivce registry* để các ứng dụng khác có thể tìm thấy nó và sử dụng nó.
+- Đối với K8s : 
+  - K8s sử dụng DNS nội bộ như là một *serivce registry*
+  - Tất cả K8s *Services* tự động đăng ký thông tin của chúng với DNS
+
+- Kubernetes cung cấp dịch vụ DNS nội bộ “DNS cluster”. Mọi Pod trong Cluster đều có thể tìm thấy nó. DNS cluster được triển khai trong *kube-system Namespace* dưới dạng một tập hợp các Pods được quản lý bởi *Deployment* là *coredns*.
+- Cluster DNS là một *Kubernetes-native application*, nó có một controller theo dõi API server cho những *Serivces* mới. Mỗi khi *Service* mới được tạo, Cluster DNS tự động tạo bản ghi DNS ánh xạ Service name tới ClusterIP.
+- Việc xác định Pods nào để gửi traffic đến khi có truy cập tới *Serivces*, K8S sử dụng Endpoints/EndpointSlice cho mọi *Service*.
+- Kubelet agent trên mỗi node liên tục theo dõi API server cho Endpoints/EndpointSlice objects mới. Kubelet agent tạo các  local networking rules để redirect ClusterIP traffic tới các Pod IP. Trong các Linux-based Kubernetes clusters, công nghệ được sử dụng để tạo các rules này là [Linux IP Virtual Server (IPVS)](https://cloudcraft.info/loadbalance-gioi-thieu-lvs-ipvs/).
+
+- Một tiến trình Service Registration đầy đủ được thể hiện ở hình duới: 
+
+![](https://i.imgur.com/npJv7DL.png)
+
+  - *Service* manifest được gửi tới API server để xác thực
+  - *Service* được phân bổ một ClusterIP và cấu hình của nó được duy trì trong cluster store.
+  - Một Endpoint/EndpointSlice opject được tạo để giữ danh sách các IP Pod khỏe mạnh phù hợp với label selector.
+  - cluster DNS với vai trò là một Kubernetes-native application theo dõi API server cho Service objects mới, đăng ký các bản ghi
+  - Mỗi node đang chạy một kube-proxy quan sát các objects mới và tạo các quy tắc IPVS/iptables cục bộ để định tuyến lưu lượng truy cập vào ClusterIP của *Service* đến các Pods phù hợp với label selector của *Service*.
+
+## Service discovery
+### Cluster DNS
+- K8s tự động cấu hình mọi containter để chúng có thể tìm và sử dụng cluster DNS để phân giải Service name thành địa chị IP. Việc này được thực hiện bằng cách quảng bá tới tất cả container’s /etc/resolv.conf file với địa chỉ IP của cluster DNS Service. 
+- Các ứng dụng sẽ phát hiện Virtual IP của một Service thông qua DNS. Kubernetes có cung cấp cho ta một internal dns server, khi một Service mới được tạo ra thì bên cạnh Virtual IP được gán cho nó thì còn có thêm một DNS đi kèm.
+- Dns của Service với format FQDN (fully qualified domain name) <service-name>.<namespace>.svc.cluster.local. Với <service-name> là tên của service ở trường metadata.name, còn <namespace> là tên namespace mà Service được tạo, .svc định nghĩa cho nó là service resource, cluster.local là hậu tố cố định.
+```
+$ cat /etc/resolv.conf
+search svc.cluster.local cluster.local default.svc.cluster.local
+nameserver 192.168.0.10
+options ndots:5
+-> Một container được cấu hình để gửi các DNS query tới cluster DNS với địa chỉ IP là 192.168.0.10
+
+$ kubectl get svc -n kube-system -l k8s-app=kube-dns
+NAME TYPE CLUSTER-IP PORT(S) AGE
+kube-dns ClusterIP 192.168.200.10 53/UDP,53/TCP,9153/TCP 3h53m
+-> Servive names sẽ được gửi tới cluster DNS tên là "kube-dns" để chuyển thành các địa chỉ IP
+```
+- Khi ứng dụng trong pod gọi tới dns của Service thì nó sẽ được phân giải bởi k8s internal DNS, và sau đó internal DNS sẽ trả về cho ứng dụng đó IP của Service.
+### Environment variables
+- Một hình thức khác để nhận service discovery là thông qua environment variables. Mỗi Pod có một tập các environment variables để phân giải *Services* hiện có trong Cluster. Tuy nhiên, Pods không thể học các Services mới được thêm sau khi Pod được tạo ra, để lấy được thông tin mới thì pod của ta cần được restart lại. Do đó thông thường ta sẽ sử dụng cluster DNS.
+
+### Service discovery and Namespaces
+-  Mọi cluster đều có một *address space* và Namespaces phân vùng cho nó.
+- Cluster *address space* dựa trên một DNS domain được gọi là cluster domain. Tên miền mặc định thường là *cluster.local* và các objects có một tên duy nhất ở trong đó. Namespaces cho phép phân vùng *address space* 
+- Format:  <object-name>.<namespace>.svc.cluster.local
+- Các Object name phải là duy nhất khi trong cùng một Namespace nhưng có thể giống nhau ở trên các Namespace khác nhau.
+![](https://i.imgur.com/Rzxt9Wu.png)
+
+- Các Objects có thể kết nối với Service trong cùng một Namespace tên rút gọn như *ent* và *cer*. Nhưng việc kết nối với các Object trong Namespace khác yêu cầu FQDN chẳng hạn như *ent.dev.svc.cluster.local* và *cer.dev.svc.cluster.local*.
+
+### Summarising service discovery
+
+![](https://i.imgur.com/YHVDGaU.png)
+- Container được cấu hình địa chỉ của ClusterDNS trong tệp */etc/resolv.conf* gửi query Service name tới cluster DNS để phân giải thành địa chỉ IP.
+- Cluster DNS trả về ClusterIP và Container gửi traffic tới nó thông qua default gateway của nó - node
+- Node gửi traffic tới default gateway của chính nó và request được thực hiện bới node's kernel.
+- Traffic sẽ được điều hướng đến các IP của Pod khớp với Service's label selector thông qua local IPVS rule của *kube-proxy*
+## Kubernetes Storage
+[Kubernetes Storage](.\Cac_thanh_phan_k8s\Storage.md)
 ```
 [To do next]
 - Continue content of the book
