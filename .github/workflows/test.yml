@@ -14,7 +14,7 @@ jobs:
       - name: Install tree
         run: sudo apt-get install tree
       - name: Generate folder structure
-        run: tree > test.md
+        run: tree --dirsfirst --noreport -F --charset ascii -T " " -o README.md && sed -i 's/^/    /' test.md
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
@@ -24,4 +24,4 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{ secrets.TEST_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
