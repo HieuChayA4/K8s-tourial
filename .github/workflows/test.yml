@@ -14,7 +14,7 @@ jobs:
       - name: Install tree
         run: sudo apt-get install tree
       - name: Generate folder structure
-        run: tree > README.md
+        run: tree > test.md
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
