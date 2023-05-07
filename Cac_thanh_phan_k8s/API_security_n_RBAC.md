@@ -14,15 +14,82 @@
 
 ![](https://i.imgur.com/gwY1cIU.png)
 
-- RBAC là *least-privilege deny-by-default* system nghĩa là tất cả các *actions* đều mặc định bị từ chối, *action* cụ thể được cho phép bằng cách tạo *allow rules*. Kubernetes không hỗ trợ *deny rules* mà chỉ có *allow rules*
+- RBAC là *least-privilege deny-by-default* system nghĩa là tất cả các *actions* đều mặc định bị từ chối, *action* cụ thể được cho phép bằng cách tạo *allow rules*. Kubernetes không hỗ trợ *deny rules* mà chỉ có *allow rules*, nghĩa là chỉ cấp cho người dùng những quyền mà họ cần để thực hiện tác vụ của mình, giảm nguy cơ xảy ra các hành động vô tình hoặc ác ý có thể gây hại cho cluster.
+ 
+### User và Permissions
+-  RBAC có hai khái niệm quan trọng cần nắm rõ: 
+    - Roles : Định nghĩa một tập các *Permission*
+    - RoleBindings : trao quyền đến các user
 
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+    namespace: test
+    name: read-deployments
+rules:
+- apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch", "list"]
+-> Một Role tên "deployments" có quyền get,watch,list với các đối tượng Deployment ở "test" namespace
+```
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+    name: read-deployments
+    namespace: test
+subjects:
+- kind: User
+    name: sky                           <<====  User được xác thực
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+    kind: Role
+    name: read-deployments              <<==== Role được gán cho user
+    apiGroup: rbac.authorization.k8s.io
 
-3. Transport Layer Security (TLS) is used to secure the communication between the API client and the API server, and it is important to properly configure and manage TLS certificates to prevent man-in-the-middle attacks.
+```
+-  Role định nghĩa ở trên có 3 thuộc tính: 
+    - apiGroups
+    - resources
+    - verbs
+-> 3 thuộc tính này địng nghĩa hành động nào được cho phép với *objects* , **apiGroups** và **resources** định nghĩa *object*, **verbs** định nghĩa hành động
 
-4. Role-Based Access Control (RBAC) is a mechanism for controlling access to Kubernetes resources based on the roles of users and systems. RBAC uses roles and bindings to define what actions a user or system can perform on specific resources in the cluster.
+![](https://i.imgur.com/10kpy81.png)
 
-5. RBAC can be used to enforce least privilege, which means giving users only the permissions they need to perform their tasks, reducing the risk of accidental or malicious actions that could harm the cluster.
+### Cluster-level users và permissions
 
-6. The Kubernetes API provides a rich set of resources and verbs that can be used to define fine-grained access controls using RBAC, allowing administrators to enforce policies for different groups of users and systems.
+- *Roles* và *RoleBinding* là các object nằm trong một *namespace*, *ClusterRoles* và *ClusterRoleBinding* là các đối tượng trên toàn cluster
 
-7. It is important to properly manage and audit RBAC policies to ensure that the cluster remains secure, and to regularly review and update policies to reflect changes in the cluster and to address new security threats.
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+name: read-deployments
+rules:
+- apiGroups: ["apps"]
+resources: ["deployments"]
+verbs: ["get", "watch", "list"]
+```
+![](https://i.imgur.com/b0GcLLD.png)
+
+- Có thể định nghĩa các Role ở cluster level (ClusterRoles) và gắn chúng vào Namespaces thông qua RoleBindings. 
+
+### Pre-created users và permissions
+
+- Hầu hết cluster có một tập các roles và bindings gán quyền tới một **all-powerful user**
+- Docker Desktop chạy API server trong Pod ở kube-system Namespace, cờ --authorization chỉ cho Kubernetes sử dụng mô đun nào để thựn hiện ủy quyền.
+![](https://i.imgur.com/wt1D3Q6.png)
+- Tất cả member của **system:masters** group được cấp quyền cluster-admin role 
+![](https://i.imgur.com/nPuLvF9.png)
+
+-  User được gán Cluster-admin role có toàn bộ *verbs* trên mọi *resources* trong mọi *Namespaces*
+![](https://i.imgur.com/raavACp.png)
+
+## Admission control
+
+- Admission control được thực thi lập tức ngay sau khi xác thực và ủy quyền thành công, Admission control sẽ xuay quanh *policies*. Có 2 loại  admission controller : 
+    - Mutating : kiểm tra sự tuân thủ và có thể sửa đổi các yêu cầu
+    - Validating : kiểm tra việc tuân thủ chính sách nhưng không thể sửa đổi yêu cầu
+
+-
