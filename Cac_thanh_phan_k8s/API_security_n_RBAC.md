@@ -92,6 +92,4 @@ verbs: ["get", "watch", "list"]
     - Mutating : kiểm tra sự tuân thủ và có thể sửa đổi các yêu cầu
     - Validating : kiểm tra việc tuân thủ chính sách nhưng không thể sửa đổi yêu cầu
 
-- 
-
-
+-
